@@ -1,0 +1,109 @@
+[
+    {
+        "Headline": "Did ELON MUSK ABANDON HIS SON? WATCH THE FULL VIRAL VIDEO to find out!",
+        "Shareable_Video_Link": "https://www.youtube.com/watch?v=MNzTHrJ0VMg",
+        "id": 1,
+        "local_path": "static/videos/video_1.mp4",
+        "duration": 30,
+        "cuts": [
+            {
+                "id": 1,
+                "segments": [
+                    {
+                        "start": "00:00:01",
+                        "end": "00:00:03"
+                    }
+                ],
+                "narrative": "bob1",
+                "output_path": "static/processed/cut_1_000001_000003.mp4",
+                "filename": "cut_1_000001_000003.mp4"
+            },
+            {
+                "id": 2,
+                "segments": [
+                    {
+                        "start": "00:00:01",
+                        "end": "00:00:04"
+                    },
+                    {
+                        "start": "00:00:07",
+                        "end": "00:00:10"
+                    }
+                ],
+                "narrative": "bobert2",
+                "output_path": "static/processed/combined_1_2_segments.mp4",
+                "filename": "combined_1_2_segments.mp4"
+            }
+        ]
+    },
+    {
+        "Headline": "Does Video Show US Cargo Ship Hit by Houthi Missile in January 2024?",
+        "Shareable_Video_Link": "https://x.com/ZgwryBy/status/1746928040704098796",
+        "id": 2
+    },
+    {
+        "Headline": "Video Shows North Koreans Pretending to Use the Internet?",
+        "Shareable_Video_Link": "https://x.com/historyinmemes/status/1767249128944185391",
+        "id": 3
+    },
+    {
+        "Headline": "Did an Elephant Seal Crawl Through a Chilean Town?",
+        "Shareable_Video_Link": "https://x.com/EarthquakeChil1/status/1313303341552881665",
+        "id": 4
+    },
+    {
+        "Headline": "Does Video Show Zelenskyy Dancing in High Heels?",
+        "Shareable_Video_Link": "https://x.com/DonaldJTrumpJr/status/1629865140085481472",
+        "id": 5
+    },
+    {
+        "Headline": "Drone video truly shows NYC protest against Trump and Musk",
+        "Shareable_Video_Link": "https://x.com/NoLieWithBTC/status/1891926650075369913",
+        "id": 6
+    },
+    {
+        "Headline": "Did Dems' Video Omit Trump's Telling Supporters To 'Peacefully and Patriotically' Protest at Capitol?",
+        "Shareable_Video_Link": "https://www.youtube.com/watch?v=ht20eDYmLXU",
+        "id": 7
+    },
+    {
+        "Headline": "Does a C-SPAN Video Show Joe Biden 'Confessing to Bribery'?",
+        "Shareable_Video_Link": "https://www.c-span.org/program/campaign-2018/former-vice-president-biden-on-us-russia-relations/495724",
+        "id": 8
+    },
+    {
+        "Headline": "Did Democrats Omit 'Under God' from the Pledge of Allegiance?",
+        "Shareable_Video_Link": "https://www.youtube.com/watch?v=d9sYe1nkyT8",
+        "id": 9
+    },
+    {
+        "Headline": "Video Shows Black People Helping \u2014 Not Looting \u2014 During LA Wildfires",
+        "Shareable_Video_Link": "https://www.instagram.com/reel/DElTv6ySgKV/",
+        "id": 10
+    },
+    {
+        "Headline": "Fake 'Hannity' Clip Doesn't Show DeSantis Defending Mar-a-Lago Raid",
+        "Shareable_Video_Link": "https://x.com/WPTV/status/1337464837992050689",
+        "id": 11
+    },
+    {
+        "Headline": "Video Doesn't Show Harris at Party Alongside Sean 'Diddy' Combs",
+        "Shareable_Video_Link": "https://www.youtube.com/watch?v=UbDK0z5V0UQ",
+        "id": 12
+    },
+    {
+        "Headline": "Miscaptioned Video Claims to Show NYC Celebration of UnitedHealthcare CEO Brian Thompson's Death",
+        "Shareable_Video_Link": "https://www.tiktok.com/@gibsonoma/video/7439580832626609454",
+        "id": 13
+    },
+    {
+        "Headline": "Video Does Not Show JD Vance Endorsing Project 2025",
+        "Shareable_Video_Link": "https://www.youtube.com/watch?v=yt4_CdS3Kgs",
+        "id": 14
+    },
+    {
+        "Headline": "Real Clip of Woman 'Completely Disappearing' Behind Scarlett Johansson on Red Carpet?",
+        "Shareable_Video_Link": "https://www.youtube.com/watch?v=v2QVuAZwrIY",
+        "id": 15
+    }
+]

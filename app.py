@@ -171,18 +171,123 @@ def download_video_route():
     else:
         return jsonify({'success': False, 'message': message})
 
+def cut_and_combine_video(input_path, output_path, segments, verbose=False):
+    """
+    Cuts multiple segments from a video and combines them into one output.
+    
+    Parameters:
+    - input_path: Path to the input video
+    - output_path: Path for the output video
+    - segments: List of dictionaries, each with 'start' and 'end' times
+    - verbose: Whether to print detailed logs
+    
+    Returns:
+    - (success, message) tuple
+    """
+    try:
+        # Create a temporary directory for segment files
+        temp_dir = os.path.join(app.config['PROCESSED_FOLDER'], 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Create a file list for concatenation
+        file_list_path = os.path.join(temp_dir, 'file_list.txt')
+        segment_files = []
+        
+        # Cut each segment into its own file
+        for i, segment in enumerate(segments):
+            seg_output = os.path.join(temp_dir, f"segment_{i}.mp4")
+            segment_files.append(seg_output)
+            
+            # Cut the segment
+            command = [
+                'ffmpeg',
+                '-i', input_path,
+                '-ss', segment['start'],
+                '-to', segment['end'],
+                '-c:v', 'libx264',
+                '-c:a', 'aac',
+                '-strict', 'experimental',
+                '-y',
+                seg_output
+            ]
+            
+            if verbose:
+                print(f"Cutting segment {i+1}: {' '.join(command)}")
+            
+            result = subprocess.run(command, capture_output=True, text=True)
+            if result.returncode != 0:
+                error_message = f"FFmpeg cutting failed for segment {i+1}:\nReturn code: {result.returncode}\nStdout: {result.stdout}\nStderr: {result.stderr}"
+                if verbose:
+                    print(error_message)
+                # Clean up any created files
+                for file in segment_files:
+                    if os.path.exists(file):
+                        os.remove(file)
+                return False, error_message
+        
+        # Create a file list for ffmpeg concat
+        with open(file_list_path, 'w') as f:
+            for file in segment_files:
+                f.write(f"file '{os.path.abspath(file)}'\n")
+        
+        # Combine all segments
+        concat_command = [
+            'ffmpeg',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', file_list_path,
+            '-c', 'copy',
+            '-y',
+            output_path
+        ]
+        
+        if verbose:
+            print(f"Combining segments: {' '.join(concat_command)}")
+        
+        concat_result = subprocess.run(concat_command, capture_output=True, text=True)
+        
+        # Clean up temporary files
+        for file in segment_files:
+            if os.path.exists(file):
+                os.remove(file)
+        if os.path.exists(file_list_path):
+            os.remove(file_list_path)
+        
+        if concat_result.returncode != 0:
+            error_message = f"FFmpeg concat failed:\nReturn code: {concat_result.returncode}\nStdout: {concat_result.stdout}\nStderr: {concat_result.stderr}"
+            if verbose:
+                print(error_message)
+            return False, error_message
+        
+        if verbose:
+            print("Successfully cut and combined video segments.")
+        return True, "Successfully cut and combined video segments."
+    except Exception as e:
+        return False, f"An error occurred during video processing: {e}"
+
 @app.route('/cut', methods=['POST'])
 def cut_video_route():
-    """API endpoint to cut a video."""
+    """API endpoint to cut a video with multiple segments."""
     data = request.get_json()
     video_id = data.get('id')
-    start_time = data.get('startTime')
-    end_time = data.get('endTime')
+    segments = data.get('segments', [])
     narrative = data.get('narrative')
     
-    # Validate time formats
-    if not validate_time_format(start_time) or not validate_time_format(end_time):
-        return jsonify({'success': False, 'message': 'Invalid time format. Use HH:MM:SS or MM:SS'})
+    # Support single segment format for backward compatibility
+    if 'startTime' in data and 'endTime' in data:
+        segments.append({
+            'start': data.get('startTime'),
+            'end': data.get('endTime')
+        })
+    
+    # Validate we have at least one segment
+    if not segments:
+        return jsonify({'success': False, 'message': 'No time segments provided'})
+    
+    # Validate all time formats
+    for segment in segments:
+        if not validate_time_format(segment['start']) or not validate_time_format(segment['end']):
+            return jsonify({'success': False, 'message': 'Invalid time format. Use HH:MM:SS or MM:SS'})
     
     videos = load_json_data()
     video = next((v for v in videos if v.get('id') == video_id), None)
@@ -191,10 +296,19 @@ def cut_video_route():
         return jsonify({'success': False, 'message': 'Video not found or not downloaded'})
     
     input_path = video.get('local_path')
-    output_filename = f"cut_{video_id}_{start_time.replace(':', '')}_{end_time.replace(':', '')}.mp4"
+    
+    # Generate a unique filename based on the first and last segments
+    output_filename = f"cut_{video_id}_{segments[0]['start'].replace(':', '')}_{segments[-1]['end'].replace(':', '')}.mp4"
+    if len(segments) > 1:
+        output_filename = f"combined_{video_id}_{len(segments)}_segments.mp4"
+    
     output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
     
-    success, message = cut_video(input_path, output_path, start_time, end_time, verbose=True)
+    # Process based on number of segments
+    if len(segments) == 1:
+        success, message = cut_video(input_path, output_path, segments[0]['start'], segments[0]['end'], verbose=True)
+    else:
+        success, message = cut_and_combine_video(input_path, output_path, segments, verbose=True)
     
     if success:
         # Update video data with cut information
@@ -203,8 +317,7 @@ def cut_video_route():
         
         video['cuts'].append({
             'id': len(video.get('cuts', [])) + 1,
-            'start_time': start_time,
-            'end_time': end_time,
+            'segments': segments,
             'narrative': narrative,
             'output_path': output_path,
             'filename': output_filename

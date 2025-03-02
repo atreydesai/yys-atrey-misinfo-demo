@@ -42,7 +42,7 @@
 <body>
     <div class="container mt-4">
         <h1 class="mb-4">Video Processor</h1>
-        
+
         <!-- Load JSON File -->
         <div class="card mb-4">
             <div class="card-header">Load Videos</div>
@@ -57,7 +57,7 @@
                 <div id="jsonUploadStatus" class="mt-3"></div>
             </div>
         </div>
-        
+
         <!-- Videos Container -->
         <div id="videosContainer">
             {% if videos %}
@@ -65,7 +65,7 @@
                 <div class="video-section" data-video-id="{{ video.id }}">
                     <h3>{{ video.Headline }}</h3>
                     <p><strong>Source:</strong> {{ video.Shareable_Video_Link }}</p>
-                    
+
                     {% if video.local_path %}
                         <div class="mb-3">
                             <video controls>
@@ -77,15 +77,30 @@
                         <button class="btn btn-primary download-btn" data-video-id="{{ video.id }}">Download Video</button>
                         <div class="status-message" id="download-status-{{ video.id }}"></div>
                     {% endif %}
-                    
+
                     {% if video.local_path %}
+                        <!-- Narrative Input -->
                         <div class="row mb-3">
                             <div class="col-md-12">
                                 <label for="narrative-{{ video.id }}" class="form-label">Narrative:</label>
                                 <textarea class="form-control" id="narrative-{{ video.id }}" rows="3" placeholder="Enter narrative description"></textarea>
                             </div>
                         </div>
+
+                        <!-- Single/Multiple Segment Switch -->
                         <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="use-single-mode-{{ video.id }}" checked>
+                                    <label class="form-check-label" for="use-single-mode-{{ video.id }}">
+                                        Single segment mode (uncheck for multiple segments)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Single Segment Mode Inputs -->
+                        <div class="row mb-3 single-mode-container" id="single-mode-{{ video.id }}">
                             <div class="col-md-5">
                                 <label for="startTime-{{ video.id }}" class="form-label">Start Time (HH:MM:SS):</label>
                                 <input type="text" class="form-control" id="startTime-{{ video.id }}" placeholder="00:00:00">
@@ -98,16 +113,64 @@
                                 <button class="btn btn-success w-100 cut-btn" data-video-id="{{ video.id }}">Cut Video</button>
                             </div>
                         </div>
+
+                        <!-- Multiple Segments Mode Inputs -->
+                        <div class="multi-mode-container" id="multi-mode-{{ video.id }}" style="display: none;">
+                            <div class="row mb-2">
+                                <div class="col-md-10">
+                                    <label class="form-label">Multiple Segments (Start/End Times):</label>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary w-100" onclick="addSegmentRow('{{ video.id }}')">Add Segment</button>
+                                </div>
+                            </div>
+
+                            <div id="segments-container-{{ video.id }}">
+                                <!-- Initial segment row -->
+                                <div class="row mb-2 segment-row" id="segment-{{ video.id }}-0">
+                                    <div class="col-md-5">
+                                        <input type="text" class="form-control segment-start" placeholder="00:00:00" data-segment-id="0">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <input type="text" class="form-control segment-end" placeholder="00:01:00" data-segment-id="0">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-danger w-100" onclick="removeSegmentRow('{{ video.id }}', 0)">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <button class="btn btn-success w-100 cut-btn" data-video-id="{{ video.id }}">
+                                        Cut & Combine Segments
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Message Display -->
                         <div class="status-message" id="cut-status-{{ video.id }}"></div>
                     {% endif %}
-                    
+
+
                     {% if video.cuts %}
                         <h4 class="mt-4">Video Cuts</h4>
                         {% for cut in video.cuts %}
                             <div class="cut-section">
                                 <div class="row">
                                     <div class="col-md-8">
-                                        <h5>Cut #{{ cut.id }}: {{ cut.start_time }} - {{ cut.end_time }}</h5>
+                                        <h5>Cut #{{ cut.id }}</h5>
+                                         {% if cut.segments %}
+                                            <p><strong>Segments:</strong></p>
+                                            <ul>
+                                            {% for segment in cut.segments %}
+                                                <li>{{ segment.start }} - {{ segment.end }}</li>
+                                            {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p><strong>Time Range:</strong> {{ cut.start_time }} - {{ cut.end_time }}</p>
+                                        {% endif %}
                                         <p class="narrative">{{ cut.narrative }}</p>
                                     </div>
                                     <div class="col-md-4">
@@ -134,22 +197,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            // Handle JSON file upload
+            // --- JSON Upload ---
             $('#jsonUploadForm').on('submit', function(e) {
                 e.preventDefault();
                 const fileInput = document.getElementById('jsonFile');
                 const file = fileInput.files[0];
-                
+
                 if (!file) {
                     $('#jsonUploadStatus').html('<div class="alert alert-danger">Please select a JSON file</div>');
                     return;
                 }
-                
+
                 const formData = new FormData();
                 formData.append('json_file', file);
-                
+
                 $.ajax({
-                    url: '/load_videos',
+                    url: '/load_videos',  // Your Flask route for loading videos
                     type: 'POST',
                     data: formData,
                     processData: false,
@@ -157,84 +220,152 @@
                     success: function(response) {
                         if (response.success) {
                             $('#jsonUploadStatus').html(`<div class="alert alert-success">${response.message}</div>`);
-                            // Reload the page to show the loaded videos
-                            location.reload();
+                            location.reload(); // Reload to display videos
                         } else {
                             $('#jsonUploadStatus').html(`<div class="alert alert-danger">${response.message}</div>`);
                         }
                     },
                     error: function() {
-                        $('#jsonUploadStatus').html('<div class="alert alert-danger">An error occurred while loading the JSON file</div>');
+                        $('#jsonUploadStatus').html('<div class="alert alert-danger">Error loading JSON.</div>');
                     }
                 });
             });
-            
-            // Handle video download
+
+            // --- Download Video ---
             $('.download-btn').on('click', function() {
                 const videoId = $(this).data('video-id');
                 const statusElement = $(`#download-status-${videoId}`);
-                
-                statusElement.html('<div class="alert alert-info">Downloading video, please wait...</div>');
-                
+                statusElement.html('<div class="alert alert-info">Downloading...</div>');
+
                 $.ajax({
-                    url: '/download',
+                    url: '/download',  // Your Flask route for downloading
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ id: videoId }),
                     success: function(response) {
                         if (response.success) {
                             statusElement.html(`<div class="alert alert-success">${response.message}</div>`);
-                            // Reload the page to show the downloaded video
                             location.reload();
                         } else {
                             statusElement.html(`<div class="alert alert-danger">${response.message}</div>`);
                         }
                     },
                     error: function() {
-                        statusElement.html('<div class="alert alert-danger">An error occurred during download</div>');
+                        statusElement.html('<div class="alert alert-danger">Download error.</div>');
                     }
                 });
             });
-            
-            // Handle video cutting
+
+
+            // --- Video Cutting (Single and Multiple Segments) ---
+
+            // Counter for dynamic segment fields
+            let segmentCounter = {};
+
+            // Initialize segment counter
+            $('.video-section').each(function() {
+                const videoId = $(this).data('video-id');
+                segmentCounter[videoId] = 1;
+            });
+
+            // Add Segment Row
+            window.addSegmentRow = function(videoId) {
+                const count = segmentCounter[videoId]++;
+                const segmentHtml = `
+                    <div class="row mb-2 segment-row" id="segment-${videoId}-${count}">
+                        <div class="col-md-5">
+                            <input type="text" class="form-control segment-start" placeholder="00:00:00" data-segment-id="${count}">
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" class="form-control segment-end" placeholder="00:01:00" data-segment-id="${count}">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-danger w-100" onclick="removeSegmentRow('${videoId}', ${count})">Remove</button>
+                        </div>
+                    </div>`;
+                $(`#segments-container-${videoId}`).append(segmentHtml);
+            };
+
+            // Remove Segment Row
+            window.removeSegmentRow = function(videoId, rowId) {
+                $(`#segment-${videoId}-${rowId}`).remove();
+            };
+
+
+            // Cut Button Click Handler
             $('.cut-btn').on('click', function() {
                 const videoId = $(this).data('video-id');
-                const startTime = $(`#startTime-${videoId}`).val();
-                const endTime = $(`#endTime-${videoId}`).val();
                 const narrative = $(`#narrative-${videoId}`).val();
                 const statusElement = $(`#cut-status-${videoId}`);
-                
-                if (!startTime || !endTime) {
-                    statusElement.html('<div class="alert alert-danger">Please enter both start and end times</div>');
-                    return;
+                const useSingleMode = $(`#use-single-mode-${videoId}`).is(':checked');
+
+                let segments = [];
+                let valid = true;
+
+                if (useSingleMode) {
+                    // Single segment
+                    const startTime = $(`#startTime-${videoId}`).val();
+                    const endTime = $(`#endTime-${videoId}`).val();
+                    if (!startTime || !endTime) {
+                        statusElement.html('<div class="alert alert-danger">Enter start and end times.</div>');
+                        return;
+                    }
+                    segments.push({ start: startTime, end: endTime });
+                } else {
+                    // Multiple segments
+                    $(`#segments-container-${videoId} .segment-row`).each(function() {
+                        const startTime = $(this).find('.segment-start').val();
+                        const endTime = $(this).find('.segment-end').val();
+                        if (!startTime || !endTime) {
+                            statusElement.html('<div class="alert alert-danger">Missing times in a row.</div>');
+                            valid = false;
+                            return false; // Exit .each() loop
+                        }
+                        segments.push({ start: startTime, end: endTime });
+                    });
+
+                    if (!valid) return;
+                    if (segments.length === 0) {
+                        statusElement.html('<div class="alert alert-danger">Add at least one segment.</div>');
+                        return;
+                    }
                 }
-                
-                statusElement.html('<div class="alert alert-info">Cutting video, please wait...</div>');
-                
+
+                statusElement.html('<div class="alert alert-info">Processing...</div>');
+
                 $.ajax({
-                    url: '/cut',
+                    url: '/cut',  // Your Flask route for cutting
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ 
-                        id: videoId,
-                        startTime: startTime,
-                        endTime: endTime,
-                        narrative: narrative
-                    }),
+                    data: JSON.stringify({ id: videoId, segments: segments, narrative: narrative }),
                     success: function(response) {
                         if (response.success) {
                             statusElement.html(`<div class="alert alert-success">${response.message}</div>`);
-                            // Reload the page to show the cut video
                             location.reload();
                         } else {
                             statusElement.html(`<div class="alert alert-danger">${response.message}</div>`);
                         }
                     },
                     error: function() {
-                        statusElement.html('<div class="alert alert-danger">An error occurred during video cutting</div>');
+                        statusElement.html('<div class="alert alert-danger">Cutting error.</div>');
                     }
                 });
             });
+
+            // Toggle Single/Multiple Mode (per video)
+            $('.video-section').each(function() {
+                const videoId = $(this).data('video-id');
+                $(`#use-single-mode-${videoId}`).change(function() {
+                    if (this.checked) {
+                        $(`#single-mode-${videoId}`).show();
+                        $(`#multi-mode-${videoId}`).hide();
+                    } else {
+                        $(`#single-mode-${videoId}`).hide();
+                        $(`#multi-mode-${videoId}`).show();
+                    }
+                });
+            });
+
         });
     </script>
 </body>
