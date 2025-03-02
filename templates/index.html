@@ -102,12 +102,12 @@
                         <!-- Single Segment Mode Inputs -->
                         <div class="row mb-3 single-mode-container" id="single-mode-{{ video.id }}">
                             <div class="col-md-5">
-                                <label for="startTime-{{ video.id }}" class="form-label">Start Time (HH:MM:SS):</label>
-                                <input type="text" class="form-control" id="startTime-{{ video.id }}" placeholder="00:00:00">
+                                <label for="startTime-{{ video.id }}" class="form-label">Start Time (MM:SS):</label>
+                                <input type="text" class="form-control" id="startTime-{{ video.id }}" placeholder="00:00">
                             </div>
                             <div class="col-md-5">
-                                <label for="endTime-{{ video.id }}" class="form-label">End Time (HH:MM:SS):</label>
-                                <input type="text" class="form-control" id="endTime-{{ video.id }}" placeholder="00:01:00">
+                                <label for="endTime-{{ video.id }}" class="form-label">End Time (MM:SS):</label>
+                                <input type="text" class="form-control" id="endTime-{{ video.id }}" placeholder="01:00">
                             </div>
                             <div class="col-md-2 d-flex align-items-end">
                                 <button class="btn btn-success w-100 cut-btn" data-video-id="{{ video.id }}">Cut Video</button>
@@ -129,10 +129,10 @@
                                 <!-- Initial segment row -->
                                 <div class="row mb-2 segment-row" id="segment-{{ video.id }}-0">
                                     <div class="col-md-5">
-                                        <input type="text" class="form-control segment-start" placeholder="00:00:00" data-segment-id="0">
+                                        <input type="text" class="form-control segment-start" placeholder="00:00" data-segment-id="0">
                                     </div>
                                     <div class="col-md-5">
-                                        <input type="text" class="form-control segment-end" placeholder="00:01:00" data-segment-id="0">
+                                        <input type="text" class="form-control segment-end" placeholder="01:00" data-segment-id="0">
                                     </div>
                                     <div class="col-md-2">
                                         <button class="btn btn-danger w-100" onclick="removeSegmentRow('{{ video.id }}', 0)">Remove</button>
@@ -212,7 +212,7 @@
                 formData.append('json_file', file);
 
                 $.ajax({
-                    url: '/load_videos',  // Your Flask route for loading videos
+                    url: '/load_videos',
                     type: 'POST',
                     data: formData,
                     processData: false,
@@ -220,7 +220,7 @@
                     success: function(response) {
                         if (response.success) {
                             $('#jsonUploadStatus').html(`<div class="alert alert-success">${response.message}</div>`);
-                            location.reload(); // Reload to display videos
+                            location.reload();
                         } else {
                             $('#jsonUploadStatus').html(`<div class="alert alert-danger">${response.message}</div>`);
                         }
@@ -238,7 +238,7 @@
                 statusElement.html('<div class="alert alert-info">Downloading...</div>');
 
                 $.ajax({
-                    url: '/download',  // Your Flask route for downloading
+                    url: '/download',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ id: videoId }),
@@ -258,26 +258,21 @@
 
 
             // --- Video Cutting (Single and Multiple Segments) ---
-
-            // Counter for dynamic segment fields
             let segmentCounter = {};
-
-            // Initialize segment counter
             $('.video-section').each(function() {
                 const videoId = $(this).data('video-id');
                 segmentCounter[videoId] = 1;
             });
 
-            // Add Segment Row
             window.addSegmentRow = function(videoId) {
                 const count = segmentCounter[videoId]++;
                 const segmentHtml = `
                     <div class="row mb-2 segment-row" id="segment-${videoId}-${count}">
                         <div class="col-md-5">
-                            <input type="text" class="form-control segment-start" placeholder="00:00:00" data-segment-id="${count}">
+                            <input type="text" class="form-control segment-start" placeholder="00:00" data-segment-id="${count}">
                         </div>
                         <div class="col-md-5">
-                            <input type="text" class="form-control segment-end" placeholder="00:01:00" data-segment-id="${count}">
+                            <input type="text" class="form-control segment-end" placeholder="01:00" data-segment-id="${count}">
                         </div>
                         <div class="col-md-2">
                             <button class="btn btn-danger w-100" onclick="removeSegmentRow('${videoId}', ${count})">Remove</button>
@@ -286,13 +281,10 @@
                 $(`#segments-container-${videoId}`).append(segmentHtml);
             };
 
-            // Remove Segment Row
             window.removeSegmentRow = function(videoId, rowId) {
                 $(`#segment-${videoId}-${rowId}`).remove();
             };
 
-
-            // Cut Button Click Handler
             $('.cut-btn').on('click', function() {
                 const videoId = $(this).data('video-id');
                 const narrative = $(`#narrative-${videoId}`).val();
@@ -303,7 +295,6 @@
                 let valid = true;
 
                 if (useSingleMode) {
-                    // Single segment
                     const startTime = $(`#startTime-${videoId}`).val();
                     const endTime = $(`#endTime-${videoId}`).val();
                     if (!startTime || !endTime) {
@@ -312,14 +303,13 @@
                     }
                     segments.push({ start: startTime, end: endTime });
                 } else {
-                    // Multiple segments
                     $(`#segments-container-${videoId} .segment-row`).each(function() {
                         const startTime = $(this).find('.segment-start').val();
                         const endTime = $(this).find('.segment-end').val();
                         if (!startTime || !endTime) {
                             statusElement.html('<div class="alert alert-danger">Missing times in a row.</div>');
                             valid = false;
-                            return false; // Exit .each() loop
+                            return false;
                         }
                         segments.push({ start: startTime, end: endTime });
                     });
@@ -334,7 +324,7 @@
                 statusElement.html('<div class="alert alert-info">Processing...</div>');
 
                 $.ajax({
-                    url: '/cut',  // Your Flask route for cutting
+                    url: '/cut',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ id: videoId, segments: segments, narrative: narrative }),
@@ -351,8 +341,7 @@
                     }
                 });
             });
-
-            // Toggle Single/Multiple Mode (per video)
+            
             $('.video-section').each(function() {
                 const videoId = $(this).data('video-id');
                 $(`#use-single-mode-${videoId}`).change(function() {
