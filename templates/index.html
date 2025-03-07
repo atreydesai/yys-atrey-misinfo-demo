@@ -178,6 +178,17 @@
                                             <source src="/{{ cut.output_path }}" type="video/mp4">
                                             Your browser does not support the video tag.
                                         </video>
+                                        <button class="btn btn-warning mt-2 out-of-context-btn" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}">Out of Context</button>
+                                        <button class="btn btn-info mt-2 in-context-btn" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}">In-Context</button>
+                                         <div class="status-message" id="context-status-{{ video.id }}-{{ cut.id }}"></div>
+                                        {% if cut.out_of_context_prompt %}
+                                            <p><strong>Out-of-Context Prompt:</strong> {{ cut.out_of_context_prompt }}</p>
+                                            <p><strong>Out-of-Context Answer:</strong> {{ cut.out_of_context_answer }}</p>
+                                        {% endif %}
+                                        {% if cut.in_context_prompt %}
+                                            <p><strong>In-Context Prompt:</strong> {{ cut.in_context_prompt }}</p>
+                                            <p><strong>In-Context Answer:</strong> {{ cut.in_context_answer }}</p>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -341,7 +352,7 @@
                     }
                 });
             });
-            
+
             $('.video-section').each(function() {
                 const videoId = $(this).data('video-id');
                 $(`#use-single-mode-${videoId}`).change(function() {
@@ -354,6 +365,42 @@
                     }
                 });
             });
+
+            // --- Context Processing ---
+            $('.out-of-context-btn').on('click', function() {
+                processContextRequest($(this), 'out');
+            });
+
+            $('.in-context-btn').on('click', function() {
+                processContextRequest($(this), 'in');
+            });
+
+
+            function processContextRequest(button, contextType) {
+                const videoId = button.data('video-id');
+                const cutId = button.data('cut-id');
+                const statusElement = $(`#context-status-${videoId}-${cutId}`);
+                statusElement.html('<div class="alert alert-info">Processing...</div>');
+
+                $.ajax({
+                    url: '/process_context',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ video_id: videoId, cut_id: cutId, context_type: contextType }),
+                    success: function(response) {
+                        if (response.success) {
+                            statusElement.html(`<div class="alert alert-success">${response.message}</div>`);
+                            // Optionally, display the response on the page.
+                            location.reload(); // Simplest way to refresh the data.
+                        } else {
+                            statusElement.html(`<div class="alert alert-danger">${response.message}</div>`);
+                        }
+                    },
+                    error: function() {
+                        statusElement.html('<div class="alert alert-danger">Context processing error.</div>');
+                    }
+                });
+            }
 
         });
     </script>

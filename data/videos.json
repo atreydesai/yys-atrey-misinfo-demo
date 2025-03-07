@@ -16,7 +16,11 @@
                 ],
                 "narrative": "Elon Musk leaves the speech while President Trump is talking.",
                 "output_path": "static/processed/cut_1_0000_0007.mp4",
-                "filename": "cut_1_0000_0007.mp4"
+                "filename": "cut_1_0000_0007.mp4",
+                "out_of_context_prompt": "video_1.mp4: context\nThe message of video_0.mp4 is \"Elon Musk leaves the speech while President Trump is talking.\"\nIs video_0.mp4 out-of-context?",
+                "out_of_context_answer": "Error generating response.",
+                "in_context_prompt": "video_1.mp4: context\nThe message of video_0.mp4 is \"Elon Musk leaves the speech while President Trump is talking.\"\nIs video_1.mp4 in-context?",
+                "in_context_answer": "Error generating response."
             },
             {
                 "id": 2,
@@ -289,6 +293,22 @@
                 "narrative": "Democrats Omit 'Under God' from the Pledge of Allegiance",
                 "output_path": "static/processed/combined_9_2_segments.mp4",
                 "filename": "combined_9_2_segments.mp4"
+            },
+            {
+                "id": 4,
+                "segments": [
+                    {
+                        "start": "00:05",
+                        "end": "00:10"
+                    }
+                ],
+                "narrative": "",
+                "output_path": "static/processed/cut_9_0005_0010.mp4",
+                "filename": "cut_9_0005_0010.mp4",
+                "out_of_context_prompt": "",
+                "out_of_context_answer": "",
+                "in_context_prompt": "",
+                "in_context_answer": ""
             }
         ]
     },
