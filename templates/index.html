@@ -13,7 +13,7 @@
             border-radius: 5px;
             background-color: #f9f9f9;
         }
-        .cut-section {
+        .clip-section {
             margin-top: 15px;
             padding: 15px;
             border: 1px solid #eee;
@@ -37,6 +37,13 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        .clip-column {
+            border-right: 1px solid #ccc; /* Add a divider */
+            padding-right: 20px;
+        }
+         .context-column{
+            padding-left: 20px;
+         }
     </style>
 </head>
 <body>
@@ -58,12 +65,27 @@
             </div>
         </div>
 
+         <!-- Demo Video Section -->
+        <div class="card mb-4">
+            <div class="card-header">Demo Video</div>
+            <div class="card-body">
+                {% if demo_video_exists %}
+                    <video controls class="w-100">
+                        <source src="/static/default/demo.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% else %}
+                    <div class="alert alert-danger">Demo file not found.</div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Videos Container -->
         <div id="videosContainer">
             {% if videos %}
                 {% for video in videos %}
                 <div class="video-section" data-video-id="{{ video.id }}">
-                    <h3>{{ video.Headline }}</h3>
+
                     <p><strong>Source:</strong> {{ video.Shareable_Video_Link }}</p>
 
                     {% if video.local_path %}
@@ -153,44 +175,40 @@
                         <div class="status-message" id="cut-status-{{ video.id }}"></div>
                     {% endif %}
 
+                   <hr> <!-- Divider Line -->
 
                     {% if video.cuts %}
-                        <h4 class="mt-4">Video Cuts</h4>
+                        <h4 class="mt-4">Clips</h4>
                         {% for cut in video.cuts %}
-                            <div class="cut-section">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <h5>Cut #{{ cut.id }}</h5>
-                                         {% if cut.segments %}
-                                            <p><strong>Segments:</strong></p>
-                                            <ul>
-                                            {% for segment in cut.segments %}
-                                                <li>{{ segment.start }} - {{ segment.end }}</li>
-                                            {% endfor %}
-                                            </ul>
-                                        {% else %}
-                                            <p><strong>Time Range:</strong> {{ cut.start_time }} - {{ cut.end_time }}</p>
-                                        {% endif %}
-                                        <p class="narrative">{{ cut.narrative }}</p>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <video controls class="w-100">
-                                            <source src="/{{ cut.output_path }}" type="video/mp4">
-                                            Your browser does not support the video tag.
-                                        </video>
-                                        <button class="btn btn-warning mt-2 out-of-context-btn" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}">Out of Context</button>
-                                        <button class="btn btn-info mt-2 in-context-btn" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}">In-Context</button>
-                                         <div class="status-message" id="context-status-{{ video.id }}-{{ cut.id }}"></div>
-                                        {% if cut.out_of_context_prompt %}
-                                            <p><strong>Out-of-Context Prompt:</strong> {{ cut.out_of_context_prompt }}</p>
-                                            <p><strong>Out-of-Context Answer:</strong> {{ cut.out_of_context_answer }}</p>
-                                        {% endif %}
-                                        {% if cut.in_context_prompt %}
-                                            <p><strong>In-Context Prompt:</strong> {{ cut.in_context_prompt }}</p>
-                                            <p><strong>In-Context Answer:</strong> {{ cut.in_context_answer }}</p>
-                                        {% endif %}
-                                    </div>
+                           <div class="clip-section row">
+                                <div class="col-md-6 clip-column">
+                                    <h5>Clip #{{ cut.id }}</h5>
+                                    {% if cut.segments %}
+                                        <p><strong>Segments:</strong></p>
+                                        <ul>
+                                        {% for segment in cut.segments %}
+                                            <li>{{ segment.start }} - {{ segment.end }}</li>
+                                        {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p><strong>Time Range:</strong> {{ cut.start_time }} - {{ cut.end_time }}</p>
+                                    {% endif %}
+                                    <p class="narrative">{{ cut.narrative }}</p>
+                                    <video controls class="w-100">
+                                        <source src="/{{ cut.output_path }}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                     <button class="btn btn-danger mt-2 delete-clip-btn" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}">Delete Clip</button>
                                 </div>
+                                <div class="col-md-6 context-column">
+                                     <button class="btn btn-warning mt-2 out-of-context-btn" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}">Out of Context</button>
+                                     <div class="status-message" id="context-status-{{ video.id }}-{{ cut.id }}"></div>
+                                    {% if cut.out_of_context_prompt %}
+                                        <p><strong>Out-of-Context Prompt:</strong> {{ cut.out_of_context_prompt }}</p>
+                                        <p><strong>Out-of-Context Answer:</strong> {{ cut.out_of_context_answer }}</p>
+                                    {% endif %}
+                                </div>
+
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -371,9 +389,33 @@
                 processContextRequest($(this), 'out');
             });
 
-            $('.in-context-btn').on('click', function() {
-                processContextRequest($(this), 'in');
-            });
+            // --- Delete Clip ---
+
+            $(document).on('click', '.delete-clip-btn', function() {
+                const videoId = $(this).data('video-id');
+                const cutId = $(this).data('cut-id');
+
+                $.ajax({
+                  url: '/delete_clip',
+                  type: 'POST',
+                  contentType: 'application/json',
+                  data: JSON.stringify({ video_id: videoId, cut_id: cutId }),
+                  success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        alert(response.message)
+                    }
+
+                  },
+                  error: function(error) {
+                    console.log("ERROR", error)
+                    alert("An error occurred while deleting the clip")
+                  }
+                })
+            })
+
 
 
             function processContextRequest(button, contextType) {

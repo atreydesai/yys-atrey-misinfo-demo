@@ -15,8 +15,10 @@ app.config['UPLOAD_FOLDER'] = 'static/videos'
 app.config['PROCESSED_FOLDER'] = 'static/processed'
 app.config['JSON_FILE'] = 'data/videos.json'
 app.config['TEMP_FOLDER'] = 'static/temp'
+app.config['DEMO_VIDEO_PATH'] = 'static/default/demo.mp4'  # Path to the demo video
 
-for directory in [app.config['UPLOAD_FOLDER'], app.config['PROCESSED_FOLDER'], 'data', app.config['TEMP_FOLDER']]:
+
+for directory in [app.config['UPLOAD_FOLDER'], app.config['PROCESSED_FOLDER'], 'data', app.config['TEMP_FOLDER'], 'static/default']: #added static/default
     os.makedirs(directory, exist_ok=True)
 
 def download_video(url, output_dir, output_filename="downloaded_video.mp4", verbose=False):
@@ -275,7 +277,9 @@ def generate_gemini_response(video_0_uri, video_1_uri, prompt):
 def index():
     """Renders the main page of the application."""
     videos = load_json_data()
-    return render_template('index.html', videos=videos)
+    demo_video_exists = os.path.exists(app.config['DEMO_VIDEO_PATH'])  # Check for demo video
+    return render_template('index.html', videos=videos, demo_video_exists=demo_video_exists)
+
 
 @app.route('/download', methods=['POST'])
 def download_video_route():
@@ -350,8 +354,14 @@ def cut_video_route():
         if 'cuts' not in video:
             video['cuts'] = []
 
+        # Find the next available cut ID
+        existing_cut_ids = [cut['id'] for cut in video.get('cuts', [])]
+        next_cut_id = 1
+        while next_cut_id in existing_cut_ids:
+            next_cut_id += 1
+
         video['cuts'].append({
-            'id': len(video.get('cuts', [])) + 1,
+            'id': next_cut_id,
             'segments': segments,
             'narrative': narrative,
             'output_path': output_path,
@@ -367,6 +377,38 @@ def cut_video_route():
     else:
         return jsonify({'success': False, 'message': message})
 
+@app.route('/delete_clip', methods=['POST'])
+def delete_clip_route():
+    """Deletes a processed clip from the server and updates the JSON."""
+    data = request.get_json()
+    video_id = data.get('video_id')
+    cut_id = data.get('cut_id')
+
+    videos = load_json_data()
+    video = next((v for v in videos if v.get('id') == video_id), None)
+    if not video:
+        return jsonify({'success': False, 'message': 'Video not found'})
+
+    cut_index = next(((i, c) for i, c in enumerate(video.get('cuts', [])) if c.get('id') == cut_id), None)
+
+    if cut_index is None:
+            return jsonify({'success': False, 'message': 'Clip not found'})
+
+    cut_index, cut = cut_index
+    file_to_delete = cut['output_path']
+
+    try:
+      os.remove(file_to_delete)
+    except FileNotFoundError:
+      pass
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+    del video['cuts'][cut_index]
+    save_json_data(videos)
+
+
+    return jsonify({'success': True, 'message': 'Clip deleted successfully'})
 
 
 @app.route('/process_context', methods=['POST'])
@@ -428,8 +470,8 @@ def process_context():
                     else:
                         c['in_context_prompt'] = prompt
                         c['in_context_answer'] = response_text
-                    break  
-            break 
+                    break
+            break
     save_json_data(videos)
 
 
