@@ -6,9 +6,10 @@ import shutil
 import time
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-import google.generativeai as genai
-from google.generativeai import types
+from google import genai
+import config
 
+# No need to import types explicitly
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/videos'
@@ -210,10 +211,9 @@ def cut_and_combine_video(input_path, output_path, segments, verbose=False):
         return False, f"An error occurred: {e}"
 
 def upload_video_to_gemini(file_path):
-    """Uploads a video file to the Gemini File API and returns the file URI."""
+    """Uploads a video file, waits for processing, and returns the file object."""
     try:
-        genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-        client = genai.Client()
+        client = genai.Client(api_key="AIzaSyBdOgZznQPKLDRt-4jhrTyVV461SonYnm0")
         print("Uploading file to Gemini...")
         video_file = client.files.upload(file=file_path)
         print(f"Completed upload: {video_file.uri}")
@@ -227,50 +227,26 @@ def upload_video_to_gemini(file_path):
             raise ValueError(video_file.state.name)
 
         print('Done')
-        return video_file
+        return video_file  # Return the file object, not the URI
     except Exception as e:
         print(f"Error uploading video to Gemini: {e}")
         return None
 
-def generate_gemini_response(video_0_uri, video_1_uri, prompt):
-    """Generates response using Gemini model with file URIs and types."""
+def generate_gemini_response(video_0_file, video_1_file, prompt):
+    """Generates a response using Gemini model with file objects and prompt."""
     try:
-        genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-        client = genai.Client()
-        model = genai.GenerativeModel('gemini-2.0-pro-exp-02-05')
+        client = genai.Client(api_key=config.GOOGLE_API_KEY)
 
-        video_0_file = client.files.get(name=video_0_uri.split('/')[-1])
-        video_1_file = client.files.get(name=video_1_uri.split('/')[-1])
-      
-        contents = [
-              types.Content(
-                  role="user",
-                  parts=[
-                      types.Part.from_uri(
-                          file_uri=video_0_file.uri,
-                          mime_type=video_0_file.mime_type,
-                      ),
-                      types.Part.from_uri(
-                          file_uri=video_1_file.uri,
-                          mime_type=video_1_file.mime_type,
-                      ),
-                  ],
-              ),
-              types.Content(
-                  role="user",
-                  parts=[
-                    types.Part.from_text(text=prompt)
-                  ]
-              )
-
-          ]
-
-
-        response = model.generate_content(contents=contents)
+        response = client.models.generate_content(
+            model="gemini-2.0-pro-exp-02-05", contents=[
+                video_0_file, 
+                video_1_file, 
+                prompt])
         return response.text
     except Exception as e:
         print(f"Error in Gemini response generation: {e}")
         return f"Error generating response: {e}"
+
 
 
 @app.route('/')
@@ -441,24 +417,19 @@ def process_context():
         prompt = (f"video_1.mp4: context\n"
                   f"The message of video_0.mp4 is \"{narrative}\"\n"
                   f"Is video_0.mp4 out-of-context?")
-    elif context_type == 'in':
-        prompt = (f"video_1.mp4: context\n"
-                  f"The message of video_0.mp4 is \"{narrative}\"\n"
-                  f"Is video_0.mp4 in-context?")
     else:
         return jsonify({'success': False, 'message': 'Invalid context_type'})
 
-    # Upload videos to Gemini File API and get URIs
+    # Upload videos to Gemini File API and get file objects
     video_0_file = upload_video_to_gemini(temp_video_0_path)
     video_1_file = upload_video_to_gemini(temp_video_1_path)
 
     if not video_0_file or not video_1_file:
         return jsonify({'success': False, 'message': 'Failed to upload videos to Gemini'})
 
-    video_0_uri = video_0_file.uri
-    video_1_uri = video_1_file.uri
+    # NO LONGER pass URIs.  Pass the file objects.
+    response_text = generate_gemini_response(video_0_file, video_1_file, prompt)
 
-    response_text = generate_gemini_response(video_0_uri, video_1_uri, prompt)
 
     for v in videos:
         if v.get('id') == video_id:
@@ -473,7 +444,6 @@ def process_context():
                     break
             break
     save_json_data(videos)
-
 
     return jsonify({'success': True, 'message': 'Context processed', 'response': response_text})
 

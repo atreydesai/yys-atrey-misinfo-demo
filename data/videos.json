@@ -17,8 +17,8 @@
                 "narrative": "This man leaves his child on the step",
                 "output_path": "static/processed/cut_1_0000_0005.mp4",
                 "filename": "cut_1_0000_0005.mp4",
-                "out_of_context_prompt": "",
-                "out_of_context_answer": "",
+                "out_of_context_prompt": "video_1.mp4: context\nThe message of video_0.mp4 is \"This man leaves his child on the step\"\nIs video_0.mp4 out-of-context?",
+                "out_of_context_answer": "Yes, video_0.mp4 is out of context. The man does not abandon his child. Instead, he walks with him to his seat, and the child does not get left behind.",
                 "in_context_prompt": "",
                 "in_context_answer": ""
             },
@@ -37,8 +37,8 @@
                 "narrative": "This mean leaves his child on the step of the stage.",
                 "output_path": "static/processed/combined_1_2_segments.mp4",
                 "filename": "combined_1_2_segments.mp4",
-                "out_of_context_prompt": "",
-                "out_of_context_answer": "",
+                "out_of_context_prompt": "video_1.mp4: context\nThe message of video_0.mp4 is \"This mean leaves his child on the step of the stage.\"\nIs video_0.mp4 out-of-context?",
+                "out_of_context_answer": "Yes, the video is out of context. The video shows Elon Musk walking down the stairs from a stage with a young child, identified as his son \"X,\" who is lagging behind. The original poster is claiming Musk is leaving his child unattended. However, several sources state that the man next to Musk is the boy\u2019s nanny, so the child was not alone, and Musk likely only walked ahead of the pair briefly before getting back to his son.  There is no evidence Musk \"left\" his son on the stairs.",
                 "in_context_prompt": "",
                 "in_context_answer": ""
             }
