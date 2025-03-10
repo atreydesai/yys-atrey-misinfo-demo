@@ -7,16 +7,15 @@ import time
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from google import genai
-import config
+import config #This is the secrets file, contact Atrey for API key
 
-# No need to import types explicitly
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/videos'
 app.config['PROCESSED_FOLDER'] = 'static/processed'
 app.config['JSON_FILE'] = 'data/videos.json'
 app.config['TEMP_FOLDER'] = 'static/temp'
-app.config['DEMO_VIDEO_PATH'] = 'static/default/demo.mp4'  # Path to the demo video
+app.config['DEMO_VIDEO_PATH'] = 'static/default/demo.mp4' 
 
 
 for directory in [app.config['UPLOAD_FOLDER'], app.config['PROCESSED_FOLDER'], 'data', app.config['TEMP_FOLDER'], 'static/default']: #added static/default
@@ -420,14 +419,12 @@ def process_context():
     else:
         return jsonify({'success': False, 'message': 'Invalid context_type'})
 
-    # Upload videos to Gemini File API and get file objects
     video_0_file = upload_video_to_gemini(temp_video_0_path)
     video_1_file = upload_video_to_gemini(temp_video_1_path)
 
     if not video_0_file or not video_1_file:
         return jsonify({'success': False, 'message': 'Failed to upload videos to Gemini'})
 
-    # NO LONGER pass URIs.  Pass the file objects.
     response_text = generate_gemini_response(video_0_file, video_1_file, prompt)
 
 
