@@ -110,15 +110,15 @@
 
                     {% if video.local_path %}
                         <!-- Narrative Input -->
-                        <div class="row mb-3">
+                       <!--  <div class="row mb-3">
                             <div class="col-md-12">
                                 <label for="narrative-{{ video.id }}" class="form-label">Narrative:</label>
                                 <textarea class="form-control" id="narrative-{{ video.id }}" rows="3" placeholder="Enter narrative description"></textarea>
                             </div>
-                        </div>
+                        </div>-->
 
                         <!-- Single/Multiple Segment Switch -->
-                        <div class="row mb-3">
+                       <!--  <div class="row mb-3">
                             <div class="col-md-12">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="use-single-mode-{{ video.id }}" checked>
@@ -127,7 +127,7 @@
                                     </label>
                                 </div>
                             </div>
-                        </div>
+                        </div>-->
 
                         <!-- Single Segment Mode Inputs -->
                         <div class="row mb-3 single-mode-container" id="single-mode-{{ video.id }}">
@@ -145,7 +145,7 @@
                         </div>
 
                         <!-- Multiple Segments Mode Inputs -->
-                        <div class="multi-mode-container" id="multi-mode-{{ video.id }}" style="display: none;">
+                       <!-- <div class="multi-mode-container" id="multi-mode-{{ video.id }}" style="display: none;">
                             <div class="row mb-2">
                                 <div class="col-md-10">
                                     <label class="form-label">Multiple Segments (Start/End Times):</label>
@@ -156,7 +156,7 @@
                             </div>
 
                             <div id="segments-container-{{ video.id }}">
-                                <!-- Initial segment row -->
+
                                 <div class="row mb-2 segment-row" id="segment-{{ video.id }}-0">
                                     <div class="col-md-5">
                                         <input type="text" class="form-control segment-start" placeholder="00:00" data-segment-id="0">
@@ -177,7 +177,7 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </div>-->
 
                         <!-- Status Message Display -->
                         <div class="status-message" id="cut-status-{{ video.id }}"></div>
@@ -203,7 +203,8 @@
                                     {% endif %}
                                      <div class="narrative-box">
                                         <p><strong>Narrative:</strong></p>
-                                        <p>{{ cut.narrative }}</p>
+                                        <textarea class="form-control narrative-textarea" data-video-id="{{ video.id }}" data-cut-id="{{ cut.id }}" onchange="updateNarrative('{{ video.id }}', '{{ cut.id }}', this.value)">{{ cut.narrative }}</textarea>
+
                                     </div>
                                     <video controls class="w-100">
                                         <source src="/{{ cut.output_path }}" type="video/mp4">
@@ -350,7 +351,7 @@
 
             $('.cut-btn').on('click', function() {
                 const videoId = $(this).data('video-id');
-                const narrative = $(`#narrative-${videoId}`).val();
+                //const narrative = $(`#narrative-${videoId}`).val();
                 const statusElement = $(`#cut-status-${videoId}`);
                 const useSingleMode = $(`#use-single-mode-${videoId}`).is(':checked');
 
@@ -365,7 +366,7 @@
                         return;
                     }
                     segments.push({ start: startTime, end: endTime });
-                } else {
+                } /*else {
                     $(`#segments-container-${videoId} .segment-row`).each(function() {
                         const startTime = $(this).find('.segment-start').val();
                         const endTime = $(this).find('.segment-end').val();
@@ -382,7 +383,7 @@
                         statusElement.html('<div class="alert alert-danger">Add at least one segment.</div>');
                         return;
                     }
-                }
+                }*/
 
                 statusElement.html('<div class="alert alert-info">Processing...</div>');
 
@@ -390,7 +391,7 @@
                     url: '/cut',
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ id: videoId, segments: segments, narrative: narrative }),
+                    data: JSON.stringify({ id: videoId, segments: segments}),
                     success: function(response) {
                         if (response.success) {
                             statusElement.html(`<div class="alert alert-success">${response.message}</div>`);
@@ -478,6 +479,28 @@
             }
 
         });
+
+        function updateNarrative(videoId, cutId, newNarrative) {
+        $.ajax({
+            url: '/update_narrative',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ video_id: videoId, cut_id: cutId, narrative: newNarrative }),
+            success: function(response) {
+            if (response.success) {
+                console.log("Narrative updated successfully");
+                // Optionally, show a success message to the user
+              } else {
+                    console.error("Error updating narrative:", response.message);
+                    alert("Failed to update narrative: " + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+              console.error("Error updating narrative:", error);
+              alert("Error updating narrative. See console for details.");
+            }
+            });
+        }
     </script>
 </body>
 </html>

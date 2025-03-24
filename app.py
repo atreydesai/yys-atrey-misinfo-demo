@@ -17,7 +17,7 @@ app.config['UPLOAD_FOLDER'] = 'static/videos'
 app.config['PROCESSED_FOLDER'] = 'static/processed'
 app.config['JSON_FILE'] = 'data/videos.json'
 app.config['TEMP_FOLDER'] = 'static/temp'
-app.config['DEMO_VIDEO_PATH'] = 'static/default/demo.mp4' 
+app.config['DEMO_VIDEO_PATH'] = 'static/default/demo.mp4'
 app.config['ANNOTATED_JSONS_FOLDER'] = 'data/annotated_jsons'
 
 
@@ -243,8 +243,8 @@ def generate_gemini_response(video_0_file, video_1_file, prompt):
 
         response = client.models.generate_content(
             model="gemini-2.0-pro-exp-02-05", contents=[
-                video_0_file, 
-                video_1_file, 
+                video_0_file,
+                video_1_file,
                 prompt])
         return response.text
     except Exception as e:
@@ -277,10 +277,10 @@ def download_video_route():
     filename = f"video_{video_id}.mp4"
 
     success, message, duration = download_video(
-        url,
-        app.config['UPLOAD_FOLDER'],
-        filename,
-        verbose=True
+    url,
+    app.config['UPLOAD_FOLDER'],
+    filename,
+    verbose=True
     )
 
     if success:
@@ -298,7 +298,7 @@ def cut_video_route():
     data = request.get_json()
     video_id = data.get('id')
     segments = data.get('segments', [])
-    narrative = data.get('narrative')
+    #narrative = data.get('narrative') # Removed
 
     if 'startTime' in data and 'endTime' in data:
         segments.append({
@@ -321,14 +321,14 @@ def cut_video_route():
 
     input_path = video.get('local_path')
     output_filename = f"cut_{video_id}_{segments[0]['start'].replace(':', '')}_{segments[-1]['end'].replace(':', '')}.mp4"
-    if len(segments) > 1:
-        output_filename = f"combined_{video_id}_{len(segments)}_segments.mp4"
+    #if len(segments) > 1: # Removed multi-segment handling
+    #    output_filename = f"combined_{video_id}_{len(segments)}_segments.mp4"
     output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
 
     if len(segments) == 1:
         success, message = cut_video(input_path, output_path, segments[0]['start'], segments[0]['end'], verbose=True)
-    else:
-        success, message = cut_and_combine_video(input_path, output_path, segments, verbose=True)
+    #else: # Removed multi-segment handling
+    #    success, message = cut_and_combine_video(input_path, output_path, segments, verbose=True)
 
     if success:
         if 'cuts' not in video:
@@ -343,7 +343,8 @@ def cut_video_route():
         video['cuts'].append({
             'id': next_cut_id,
             'segments': segments,
-            'narrative': narrative,
+            #'narrative': narrative, # Removed narrative
+            'narrative': "",
             'output_path': output_path,
             'filename': output_filename,
             'out_of_context_prompt': '',
@@ -510,9 +511,9 @@ def submit_data():
     videos = load_json_data()
     for video in videos:
         video['submitted'] = True
-    now = datetime.now()
-    timestamp = now.strftime("%Y%m%d_%H%M%S")
-    filename = f"json_{timestamp}.json"
+    #now = datetime.now() # Removed timestamp
+    #timestamp = now.strftime("%Y%m%d_%H%M%S") # Removed timestamp
+    filename = f"json_submitted.json" #Changed filename
     filepath = os.path.join(app.config['ANNOTATED_JSONS_FOLDER'], filename)
     try:
         with open(filepath, 'w') as f:
@@ -520,6 +521,31 @@ def submit_data():
         return jsonify({'success': True, 'message': 'Data submitted successfully!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/update_narrative', methods=['POST'])
+def update_narrative():
+    data = request.get_json()
+    video_id = int(data.get('video_id'))  # Ensure int conversion
+    cut_id = int(data.get('cut_id'))      # Ensure int conversion
+    new_narrative = data.get('narrative')
+    print(data)
+
+    videos = load_json_data()
+
+    # Find the video and cut, and update the narrative.  Use int for comparison.
+    for video in videos:
+      if video.get('id') == video_id:
+        for cut in video.get('cuts', []):
+          if cut.get('id') == cut_id:
+            cut['narrative'] = new_narrative
+            if save_json_data(videos):  # Save immediately after update
+              return jsonify({'success': True, 'message': 'Narrative updated successfully!'})
+            else:
+              return jsonify({'success': False, 'message': 'Failed to save changes.'})
+        break  # Exit outer loop once video is found
+
+    return jsonify({'success': False, 'message': 'Video or cut not found.'})
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
