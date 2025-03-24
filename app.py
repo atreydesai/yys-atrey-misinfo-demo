@@ -8,6 +8,8 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from google import genai
 import config #This is the secrets file, contact Atrey for API key
+from datetime import datetime
+
 
 
 app = Flask(__name__)
@@ -16,9 +18,12 @@ app.config['PROCESSED_FOLDER'] = 'static/processed'
 app.config['JSON_FILE'] = 'data/videos.json'
 app.config['TEMP_FOLDER'] = 'static/temp'
 app.config['DEMO_VIDEO_PATH'] = 'static/default/demo.mp4' 
+app.config['ANNOTATED_JSONS_FOLDER'] = 'data/annotated_jsons'
 
 
-for directory in [app.config['UPLOAD_FOLDER'], app.config['PROCESSED_FOLDER'], 'data', app.config['TEMP_FOLDER'], 'static/default']: #added static/default
+
+
+for directory in [app.config['UPLOAD_FOLDER'], app.config['PROCESSED_FOLDER'], 'data', app.config['TEMP_FOLDER'], 'static/default', app.config['ANNOTATED_JSONS_FOLDER']]:
     os.makedirs(directory, exist_ok=True)
 
 def download_video(url, output_dir, output_filename="downloaded_video.mp4", verbose=False):
@@ -497,6 +502,24 @@ def load_videos():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error loading: {str(e)}'})
+
+
+@app.route('/submit', methods=['POST'])
+def submit_data():
+    """Submits the annotated data, saves it to a timestamped JSON file."""
+    videos = load_json_data()
+    for video in videos:
+        video['submitted'] = True
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    filename = f"json_{timestamp}.json"
+    filepath = os.path.join(app.config['ANNOTATED_JSONS_FOLDER'], filename)
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(videos, f, indent=4)
+        return jsonify({'success': True, 'message': 'Data submitted successfully!'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
